@@ -2,81 +2,90 @@
  * Based on https://gist.github.com/racerxdl/c9a592808acdd9cd178e6e97c83f8baf
  * which was based on: https://github.com/jaromir-sukuba/efm8prog/
  Use his SW to program EFM8 using arduino.
- This needs some work though (but it works)
 **/
-#define C2D 2
-#define C2CK 3
-#define LED 13  // build in on Mega
+
+// GPIO is manipulated through PORT mappings for better speed.
+// Flashes EFM8 at about 10kB/s
+// Baud rate: 1000000
+
+// Digital pin 2 on Mega
+#define C2D_PORT  PORTE
+#define C2D_PIN   4
+
+// Digital pin 3 on Mega
+#define C2CK_PORT   PORTE
+#define C2CK_PIN    5
+
+#define LED LED_BUILTIN 
 
 #define  INBUSY    0x02
 #define OUTREADY  0x01
 
-void c2_send_bits (unsigned char data, unsigned char len);
-void c2_pulse_clk (void);
-unsigned char c2_read_bits (unsigned char len);
+static void c2_send_bits (unsigned char data, unsigned char len);
+static unsigned char c2_read_bits (unsigned char len);
 
 void c2_rst (void);
 void c2_write_addr (unsigned char addr);
-unsigned char c2_read_addr (void);
-unsigned char c2_read_data (void);
-void c2_write_data (unsigned char addr);
+static unsigned char c2_read_addr (void);
+static unsigned char c2_read_data (void);
+static void c2_write_data (unsigned char addr);
 
 unsigned char c2_init_PI (void);
 unsigned char c2_read_flash_block (unsigned int addr, unsigned char * data, unsigned char len);
-unsigned char c2_poll_bit_low (unsigned char mask);
-unsigned char c2_poll_bit_high (unsigned char mask);
+static unsigned char c2_poll_bit_low (unsigned char mask);
+static unsigned char c2_poll_bit_high (unsigned char mask);
 unsigned char c2_write_flash_block (unsigned int addr, unsigned char * data, unsigned char len);
 unsigned char c2_erase_device (void);
 
 
 void c2_rst() {
-  digitalWrite(C2CK, LOW);
-  delayMicroseconds(100);
-  digitalWrite(C2CK, HIGH);
-  delayMicroseconds(100);
+  C2CK_PORT &= ~(1<<C2CK_PIN);
+  delayMicroseconds(50);
+  C2CK_PORT |= (1<<C2CK_PIN);
+  delayMicroseconds(50);
 }
 
-void c2_pulse_clk() {
-  pinMode(C2CK, OUTPUT);
-  digitalWrite(C2CK, LOW);
-  digitalWrite(C2CK, LOW);
-  digitalWrite(C2CK, LOW);
-  digitalWrite(C2CK, LOW);
-  digitalWrite(C2CK, HIGH);
-}
+#define c2_pulse_clk()\
+  C2CK_PORT &= ~(1<<C2CK_PIN); \
+  C2CK_PORT |= (1<<C2CK_PIN);
 
-unsigned char c2_read_bits (unsigned char len) {
+
+static unsigned char c2_read_bits (unsigned char len) {
   unsigned char i, data, mask;
   mask = 0x01 << (len-1);
   data = 0;
-  pinMode(C2D, INPUT);
+  //pinMode(C2D, INPUT);
+  DDRE &= ~(1<<C2D_PIN);
+  PINE &= (1<<C2D_PIN);
   for (i=0;i<len;i++) {
     c2_pulse_clk();
     data = data >> 1;
-    if (digitalRead(C2D) == HIGH) {
+    if (PINE & (1<<C2D_PIN)) {
       data = data | mask;
     }
   }
-  pinMode(C2D, OUTPUT);
+  DDRE |= (1<<C2D_PIN);
+  //pinMode(C2D, OUTPUT);
 
   return data;
 }
 
-void c2_send_bits (unsigned char data, unsigned char len) {
+static void c2_send_bits (unsigned char data, unsigned char len) {
   unsigned char i;
-  pinMode(C2D, OUTPUT);
+  //pinMode(C2D, OUTPUT);
+  DDRE |= (1<<C2D_PIN);
   for (i=0;i<len;i++) {
     if (data&0x01) {
-      digitalWrite(C2D, HIGH);
+      C2D_PORT |= (1<<C2D_PIN);
     } else {
-      digitalWrite(C2D, LOW);
+      C2D_PORT &= ~(1<<C2D_PIN); 
     }
     c2_pulse_clk();
     data = data >> 1;
   }
 }
 
-void c2_write_data (unsigned char data) {
+static void c2_write_data (unsigned char data) {
   unsigned char retval;
   c2_send_bits(0x0, 1);
   c2_send_bits(0x1, 2);
@@ -89,13 +98,13 @@ void c2_write_data (unsigned char data) {
   c2_send_bits(0x0, 1);
 }
 
-unsigned char c2_poll_bit_high (unsigned char mask) {
+static unsigned char c2_poll_bit_high (unsigned char mask) {
   unsigned char retval;
   retval = c2_read_addr();
   while ((retval&mask)==0) retval = c2_read_addr();
 }
 
-unsigned char c2_poll_bit_low (unsigned char mask) {
+static unsigned char c2_poll_bit_low (unsigned char mask) {
   unsigned char retval;
   retval = c2_read_addr();
   while (retval&mask) retval = c2_read_addr();
@@ -173,7 +182,7 @@ unsigned char c2_init_PI (void) {
   return 0;
 }
 
-unsigned char c2_read_data() {
+static unsigned char c2_read_data() {
   unsigned char retval;
   c2_send_bits(0x0, 1);
   c2_send_bits(0x0, 2);
@@ -187,7 +196,7 @@ unsigned char c2_read_data() {
   return retval;
 }
 
-unsigned char c2_read_addr() {
+static unsigned char c2_read_addr() {
   unsigned char retval;
   c2_send_bits(0x0, 1);
   c2_send_bits(0x2, 2);
@@ -204,20 +213,20 @@ void c2_write_addr(unsigned char addr) {
 }
 
 void setup() {
-  Serial.begin(38400);
-  pinMode(C2CK, OUTPUT);
-  pinMode(C2D, OUTPUT);
+  Serial.begin(1000000);
+  
+  DDRE |= (1<<C2D_PIN);
+  DDRE |= (1<<C2CK_PIN);
+  C2CK_PORT |= (1<<C2CK_PIN);
+  
   digitalWrite(LED, LOW);
-  digitalWrite(C2CK, HIGH);
-  delay(300);
 }
 
 unsigned int i;
 unsigned char retval;
-unsigned char flash_array[34],flash_array2[34],flash_array3[34];
 unsigned char rx_message[250],rx_message_ptr;
 unsigned char rx,main_state,bytes_to_receive,rx_state;
-unsigned char flash_buffer[130];
+unsigned char flash_buffer[250];
 unsigned long addr;
 
 unsigned char rx_state_machine (unsigned char state, unsigned char rx_char) {
@@ -241,11 +250,15 @@ unsigned char rx_state_machine (unsigned char state, unsigned char rx_char) {
 }
 
 void loop() {
+
   if (Serial.available()) {
     rx = Serial.read();
     rx_state = rx_state_machine(rx_state, rx);
     if (rx_state == 3) {
       switch (rx_message[0]) {
+        case 0x0:
+        Serial.write(0x80);
+        break;
         case 0x01:
           c2_init_PI();
           Serial.write(0x81);
