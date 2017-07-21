@@ -172,13 +172,35 @@ unsigned char c2_erase_device (void) {
   retval = c2_read_data();
 }
 
+unsigned char c2_write_sfr (unsigned char addr, unsigned char val) {
+  unsigned char retval;
+  c2_write_addr(0xB4);
+  c2_write_data(0x0A);
+  c2_poll_bit_low(INBUSY);
+  c2_poll_bit_high(OUTREADY);
+  retval = c2_read_data();
+  c2_write_data(addr);
+  c2_poll_bit_low(INBUSY);  
+  c2_write_data(0x1);
+  c2_poll_bit_low(INBUSY);  
+  c2_write_data(val);
+  c2_poll_bit_low(INBUSY);  
+}
+
 unsigned char c2_init_PI (void) {
   c2_rst();
   c2_write_addr(0x02);
   c2_write_data(0x02);
   c2_write_data(0x04);
   c2_write_data(0x01);
-  delay(20);
+
+  // set up SFRs
+  delay(25);
+  c2_write_sfr(0xff, 0x80);
+  delay(1);
+  c2_write_sfr(0xef, 0x02);
+  delay(1);
+  c2_write_sfr(0xA9, 0x00);
   return 0;
 }
 
@@ -224,9 +246,9 @@ void setup() {
 
 unsigned int i;
 unsigned char retval;
-unsigned char rx_message[250],rx_message_ptr;
+unsigned char rx_message[300],rx_message_ptr;
 unsigned char rx,main_state,bytes_to_receive,rx_state;
-unsigned char flash_buffer[250];
+unsigned char flash_buffer[300];
 unsigned long addr;
 
 unsigned char rx_state_machine (unsigned char state, unsigned char rx_char) {
@@ -249,8 +271,13 @@ unsigned char rx_state_machine (unsigned char state, unsigned char rx_char) {
   return state;  
 }
 
-void loop() {
+#define swap(x) ((((x)>>8) & 0xff) | (((x)<<8) & 0xff00))
 
+void loop() {
+  unsigned char crc;
+  unsigned char newcrc;
+  unsigned char c;
+  unsigned long coff;
   if (Serial.available()) {
     rx = Serial.read();
     rx_state = rx_state_machine(rx_state, rx);
@@ -272,11 +299,37 @@ void loop() {
           rx_state = 0;
           break;
         case 0x03:
-          addr = (((unsigned long)(rx_message[3]))<<16) + (((unsigned long)(rx_message[4]))<<8) + (((unsigned long)(rx_message[5]))<<0);
+          addr = (((unsigned long)(rx_message[4]))<<8) + (((unsigned long)(rx_message[5]))<<0);
+          crc = rx_message[6];
+          newcrc = rx_message[5] + rx_message[4];
           for (i=0;i<rx_message[2];i++) {
-            flash_buffer[i] = rx_message[i+6];
+            flash_buffer[i] = rx_message[i+7];
           }
-          c2_write_flash_block(addr,flash_buffer,rx_message[2]);
+
+          
+          for(i=0; i < rx_message[2]; i++)
+          {
+            newcrc += flash_buffer[i];
+          }
+
+          if (crc != newcrc)
+          {
+            Serial.write(0x43);
+            break;
+          }
+
+          
+          c = rx_message[2];
+          coff = 0;
+          c2_write_flash_block(addr, flash_buffer,c);
+         // while (c)
+         
+         // {
+          //  c2_write_flash_block(addr + coff, flash_buffer + coff,min(c, 4));
+          //  coff += 4;
+          //  c -= min(c, 4);
+          //}
+          //delay(1);
           Serial.write(0x83);
           rx_state = 0;
           break;

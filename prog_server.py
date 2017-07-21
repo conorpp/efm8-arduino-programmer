@@ -12,6 +12,22 @@ class PI():
     def __init__(self, com):
         self.ser = serial.Serial(com, 1000000, timeout = 1)
 
+    def conf(self,):
+
+        # init Programming Interface (PI)
+        while True:
+            try:
+                self.ser.write('\x01\x00')
+                x =struct.unpack('B', self.ser.read(1))[0]
+                print 'x:',hex(x)
+                assert(0x81 == x)
+                break
+            except:
+                while self.ser.read(1) != '': pass
+
+        print 'PI initiated'
+
+
     def prog(self, firmware):
 
         print 'Connected'
@@ -19,13 +35,7 @@ class PI():
         #f = open(firmware,'r').readlines()
         f = firmware.splitlines()
 
-        # init Programming Interface (PI)
-        self.ser.write('\x01\x00')
-        x =struct.unpack('B', self.ser.read(1))[0]
-        print 'x:',hex(x)
-        assert(0x81 == x)
-
-        print 'PI initiated'
+        self.conf()
 
         # erase device
         self.ser.write('\x04\x00')
@@ -51,11 +61,28 @@ class PI():
             buf += data
             buf_size += size
 
-            if buf_size > 175:
-                #print hex(addrh), hex(addrl), buf
-                self.ser.write([0x3, buf_size + 4, buf_size, 0, addrh, addrl])
-                self.ser.write(buf.decode('hex'))
-                assert(0x83 == struct.unpack('B', self.ser.read(1))[0])
+            if buf_size > 256 - 0x20 or i == f[-2]:
+                attempts = 0
+                while True:
+                    try:
+                        print hex(addrh), hex(addrl), buf
+                        crc = addrh + addrl
+                        crc += sum([struct.unpack('B', x)[0] for x in buf.decode('hex')])
+                        assert(len(buf.decode('hex')) == buf_size)
+                        self.ser.write([0x3, buf_size + 4 + 1, buf_size, 0, addrh, addrl, crc & 0xff])
+                        self.ser.write(buf.decode('hex'))
+                        ret = struct.unpack('B', self.ser.read(1))[0]
+                        if ret == 0x83:
+                            pass
+                        else:
+                            print 'error flash write returned ', hex(ret)
+                            raise RuntimeError('bad crc')
+                        break
+                    except Exception as e:
+                        attempts += 1
+                        self.conf()
+                        print e
+                        print 'attempts:',attempts
                 total += buf_size
                 buf_size = 0
                 buf = ''
@@ -64,6 +91,16 @@ class PI():
         # reset device
         self.ser.write('\x02\x00')
         assert(0x82 == struct.unpack('B', self.ser.read(1))[0])
+
+        # reset device
+        self.ser.write('\x02\x00')
+        assert(0x82 == struct.unpack('B', self.ser.read(1))[0])
+
+        # reset device
+        self.ser.write('\x02\x00')
+        assert(0x82 == struct.unpack('B', self.ser.read(1))[0])
+
+
 
         print 'Device reset'
 
