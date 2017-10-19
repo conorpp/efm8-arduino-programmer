@@ -1,7 +1,7 @@
 # efm8-arduino-programmer
 Program EFM8 devices using an arduino
 
-Thanks to jaromir-sukuba and racerxdl for working on firmware to implement C2 protocol via arduino GPIO.
+Thanks to jaromir-sukuba and racerxdl for working on firmware to implement C2 protocol via arduino GPIO.  This work largely pulls from them.
 
 # Setting up
 
