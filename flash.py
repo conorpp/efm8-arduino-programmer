@@ -1,11 +1,8 @@
+#! python2.7
 import serial, sys, struct, time
-from flask import Flask, request
 
-app = Flask(__name__)
-
-
-if len(sys.argv) < 2:
-    print 'usage: %s <port> <serial-port1> [serial-port2...]' % sys.argv[0]
+if len(sys.argv) != 3:
+    print 'usage: %s <port> <firmware.hex>' % sys.argv[0]
     sys.exit(1)
 
 class PI():
@@ -105,18 +102,10 @@ class PI():
         print 'Device reset'
 
 print 'Once'
-programmers = {}
-for i in sys.argv[1:]:
-    programmers[i] = PI(i)
+port=sys.argv[1]
+firmware=open(sys.argv[2], 'r').read()
+programmers = PI(port)
 
-@app.route('/', methods=['POST'])
-def hello():
-    port=request.form['port']
-    firmware=request.form['firmware']
+programmers.prog(firmware)
 
-    programmers[port].prog(firmware)
 
-    return 'Success'
-
-app.debug = True
-app.run(host='127.0.0.1', port = 4040, use_reloader=False, threaded = False)
