@@ -16,7 +16,7 @@ Program the firmware to the arduino and connect C2D, C2CK, and GND to your targe
 
 ### Software
 
-You need to have Python installed.  Then, install some required python modules.
+You need to have Python installed.  Then, install some required python modules.Use Python 2.7 and Pyserial
 
 ```
 pip install -r requirements.txt
