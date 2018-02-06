@@ -8,7 +8,7 @@ https://github.com/conorpp/efm8-arduino-programmer
 
 # Setting up
 
-C2 is a 2-pin protocol.  Any arduino should work to implement the protocol via GPIO.  Just need to make sure that the correct pins are mapped for your Arduino.  Check the [firmware file](https://github.com/christophe94700/efm8-arduino-programmer/blob/master/prog/arduino_mega.ino#L11) or [firmware file](https://github.com/christophe94700/efm8-arduino-programmer/blob/master/prog/arduino_uno.ino#L11)and change the pins to map to your device if needed.  Currently, it is:
+C2 is a 2-pin protocol.  Any arduino should work to implement the protocol via GPIO.  Just need to make sure that the correct pins are mapped for your Arduino.  Check the [firmware file Arduino Mega](https://github.com/christophe94700/efm8-arduino-programmer/blob/master/prog/arduino_mega.ino#L11) or [firmware file Arduino Uno](https://github.com/christophe94700/efm8-arduino-programmer/blob/master/prog/arduino_uno.ino#L11)and change the pins to map to your device if needed.  Currently, it is:
 - for Arduino Mega and maps C2D and C2CK to digital pins 2 and 3, respectively.
 - for Arduino Uno and maps C2D and C2CK to digital pins 5 and 6, respectively.
 
