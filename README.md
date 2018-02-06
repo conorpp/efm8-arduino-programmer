@@ -30,4 +30,4 @@ Programming one target.
 py flash.py <serial-port> <firmware.hex>
 ```
 
-Supply a list of serial ports (you can use more than one arduino at a time) to handle programming.  E.g /dev/USB1 or COM1.
+For the serial ports : E.g /dev/USB1 (Linux) or COM1 (Windows).
