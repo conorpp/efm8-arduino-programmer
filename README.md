@@ -39,7 +39,7 @@ python prog_server.py <serial-port> [<serial-port2> ...]
 
 Supply a list of serial ports (you can use more than one Arduino at a time) to handle programming.  E.g /dev/USB1 or COM1 or /dev/cu.usbmodem*.
 
-###$ Client
+#### Client
 Then you can finally program something using the client script.
 
 ```
