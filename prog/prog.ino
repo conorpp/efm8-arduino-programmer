@@ -193,6 +193,15 @@ unsigned char c2_init_PI (void) {
   c2_write_data(0x02);
   c2_write_data(0x04);
   c2_write_data(0x01);
+  return 0;
+}
+
+unsigned char c2_init_PI_sfr (void) {
+  c2_rst();
+  c2_write_addr(0x02);
+  c2_write_data(0x02);
+  c2_write_data(0x04);
+  c2_write_data(0x01);
 
   // set up SFRs
   delay(25);
