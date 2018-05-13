@@ -53,3 +53,4 @@ This will connect to the server and tell it to download specified firmware via s
 - If your server can't start make sure you have port 4040 available
 - If you get python errors make sure you're not running python3
 - Some modules need sudo on some systems
+- If you're getting data errors, reduce baud rate: https://github.com/conorpp/efm8-arduino-programmer/issues/5
